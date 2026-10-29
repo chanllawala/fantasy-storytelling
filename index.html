@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tales Unwritten | Interactive Fantasy Storytelling</title>
+<meta name="description" content="An interactive fantasy storytelling studio and research showcase: Mistral-powered branching tales, state tracking, scene art and narration. Based on the University of Stirling dissertation by Kirtan Chanllawala.">
+<meta property="og:title" content="Tales Unwritten | Interactive Fantasy Storytelling">
+<meta property="og:description" content="Write your own fantasy tale with large language models, scene art and narration.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+<a class="skip" href="#studio">Skip to the story studio</a>
+
+<header id="nav">
+  <a class="brand" href="#top"><svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><path d="M4 24l4-12 6 6 2-10 2 10 6-6 4 12z" fill="currentColor"/></svg> Tales Unwritten</a>
+  <button id="navToggle" aria-label="Toggle menu" aria-expanded="false">Menu</button>
+  <nav id="menu">
+    <a href="#studio">Story Studio</a>
+    <a href="#gallery">Gallery</a>
+    <a href="#research">Research</a>
+    <a href="#completed">Completed Work</a>
+    <a href="#about">About</a>
+  </nav>
+</header>
+
+<main id="top">
+<section class="hero">
+  <canvas id="embers" aria-hidden="true"></canvas>
+  <div class="hero-inner">
+    <p class="eyebrow">Interactive Storytelling using Large Language Models</p>
+    <h1>Tales Unwritten</h1>
+    <p class="lede">Step into a living fantasy world where every choice, and every thing you dare to type, bends the story. Remembered by a story state, painted as living scenes, narrated aloud.</p>
+    <div class="cta">
+      <a class="btn primary" href="#studio">Begin a tale</a>
+      <a class="btn" href="#research">Read the research</a>
+    </div>
+  </div>
+  <div class="hero-stats" aria-label="Key figures from the dissertation">
+    <div><b>4.2 / 5</b><span>Mistral story rating</span></div>
+    <div><b>23</b><span>study participants</span></div>
+    <div><b>15</b><span>fantasy books corpus</span></div>
+  </div>
+</section>
+
+<section id="studio" class="wrap">
+  <h2>Story Studio</h2>
+  <p class="sub">Forge a hero, pick a realm, and shape the tale. Powered by Mistral through your own free API key, or a built-in offline tale when you have none.</p>
+
+  <form id="setup" class="panel" autocomplete="off">
+    <div class="grid2">
+      <label>Hero name
+        <input id="heroName" maxlength="24" value="Elara" required>
+      </label>
+      <label>A trait or detail (optional)
+        <input id="heroTrait" maxlength="80" placeholder="e.g. afraid of the dark, carries a silver flute">
+      </label>
+    </div>
+
+    <fieldset>
+      <legend>Class</legend>
+      <div class="chips" id="roles"></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Realm</legend>
+      <div class="cards" id="realms"></div>
+    </fieldset>
+
+    <label>Opening premise (optional)
+      <input id="seedIdea" maxlength="160" placeholder="A brave knight discovers a hidden realm in a crystal forest">
+    </label>
+
+    <fieldset>
+      <legend>Story engine</legend>
+      <div class="engine">
+        <label class="radio"><input type="radio" name="engine" value="mistral" checked> <span><b>Mistral (live LLM)</b><small>Endless, adaptive tales. Needs a free key from console.mistral.ai</small></span></label>
+        <label class="radio"><input type="radio" name="engine" value="offline"> <span><b>Offline tale</b><small>"The Hollow Crown", a hand-written branching story. No key, no network.</small></span></label>
+      </div>
+      <div id="keyRow" class="keyrow">
+        <input id="apiKey" type="password" placeholder="Paste your Mistral API key (kept only in this browser tab)" autocomplete="off" spellcheck="false">
+        <label class="inline"><input type="checkbox" id="rememberKey"> Remember on this device</label>
+        <p class="note">Your key is sent only to api.mistral.ai, never to this site or GitHub. Leave it blank to use the offline tale.</p>
+      </div>
+    </fieldset>
+
+    <div class="row">
+      <label class="inline"><input type="checkbox" id="autoNarrate"> Auto-narrate</label>
+    </div>
+    <div id="setupNotice" class="notice" role="alert" hidden></div>
+    <div class="row">
+      <button class="btn primary" id="beginBtn" type="submit">Begin the tale</button>
+      <button class="btn" id="continueBtn" type="button" hidden>Continue saved tale</button>
+    </div>
+  </form>
+
+  <div id="play" hidden>
+    <div class="toolbar">
+      <span id="turnBadge" class="badge">Chapter 1</span>
+      <span id="modeBadge" class="badge alt"></span>
+      <span class="spacer"></span>
+      <button class="btn small" id="btnNarrate" type="button">Narrate</button>
+      <button class="btn small" id="btnExport" type="button">Export .md</button>
+      <button class="btn small" id="btnRestart" type="button">New tale</button>
+    </div>
+    <div class="stage">
+      <div class="main">
+        <figure class="scene">
+          <div id="sceneArt" class="scene-art"></div>
+          <figcaption id="sceneCaption"></figcaption>
+          <div class="scene-tools">
+            <button class="icon" id="btnReroll" type="button" title="Repaint this scene" aria-label="Repaint this scene">&#10227;</button>
+            <button class="icon" id="btnFull" type="button" title="View full size" aria-label="View full size">&#9974;</button>
+          </div>
+        </figure>
+        <article id="passage" class="passage" aria-live="polite"></article>
+        <div id="loading" class="loading" hidden><span></span><span></span><span></span> The Loremaster is writing&hellip;</div>
+        <div id="notice" class="notice" hidden></div>
+        <div id="choices" class="choices"></div>
+        <form id="customForm" class="custom">
+          <input id="customInput" maxlength="140" placeholder="Or do anything: &quot;ask the dragon about its dreams&quot;" aria-label="Custom action">
+          <button class="btn" type="submit">Do it</button>
+        </form>
+      </div>
+      <aside class="side">
+        <div class="tabs" role="tablist">
+          <button role="tab" data-tab="chronicle" class="on">Chronicle</button>
+          <button role="tab" data-tab="journal">Journal</button>
+          <button role="tab" data-tab="analytics">Analytics</button>
+          <button role="tab" data-tab="rate">Rate</button>
+        </div>
+        <div id="tab-chronicle" class="tabpane">
+          <div class="card"><h4>Hero</h4><div id="cardHero"></div></div>
+          <div class="card"><h4>Characters met</h4><div id="cardChars"></div></div>
+          <div class="card"><h4>Places</h4><div id="cardPlaces"></div></div>
+          <div class="card"><h4>Items</h4><div id="cardItems"></div></div>
+          <div class="card"><h4>Current quest</h4><div id="cardQuest"></div></div>
+        </div>
+        <div id="tab-journal" class="tabpane" hidden><ol id="journalList" class="journal"></ol></div>
+        <div id="tab-analytics" class="tabpane" hidden><div id="metrics"></div></div>
+        <div id="tab-rate" class="tabpane" hidden>
+          <form id="rateForm">
+            <p class="note">The same four dimensions as the dissertation study. Ratings stay on this device.</p>
+            <div id="starRows"></div>
+            <textarea id="rateComment" rows="3" placeholder="Optional comments"></textarea>
+            <div class="row"><button class="btn small primary" type="submit">Submit rating</button><button class="btn small" id="btnCsv" type="button">Download CSV</button></div>
+            <p id="rateStatus" class="note" role="status"></p>
+          </form>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<section id="gallery" class="wrap">
+  <h2>Gallery of Realms</h2>
+  <p class="sub">Ten corners of the world, painted live by the site's own scene generator. Open one for endless variations, download it, or start a tale there.</p>
+  <div id="galleryGrid" class="gallery"></div>
+  <form id="conjureForm" class="panel conjure">
+    <h3>Conjure a scene from words</h3>
+    <p class="note" style="margin-bottom:12px">Describe a place: the generator reads the setting (forest, castle, sea, cave, ruins, dragon...) and the time of day, then paints it around your hero.</p>
+    <div class="row">
+      <input id="conjurePrompt" maxlength="200" placeholder="a dragon circling a ruined tower at midnight" required>
+      <select id="conjureRole" aria-label="Hero class"></select>
+      <button class="btn primary" type="submit">Conjure</button>
+    </div>
+    <div id="conjureOut" class="conjure-out" hidden></div>
+  </form>
+</section>
+
+<section id="research" class="wrap">
+  <h2>The Research</h2>
+  <p class="sub">Dissertation for BSc (Hons) Computing Science, University of Stirling, April 2025. Supervised by Burcu Can Buglalilar.</p>
+  <div class="facts">
+    <div><b>15</b> fantasy books, split 13 / 2 train / validation</div>
+    <div><b>1,024</b> token chunks</div>
+    <div><b>10</b> epochs, learning rate 1e-5</div>
+    <div><b>~14 h</b> fine-tuning on Colab GPU</div>
+    <div><b>23</b> participants, p &lt; 0.01</div>
+  </div>
+  <div class="split">
+    <div class="panel">
+      <h3>Problem</h3>
+      <p>Interactive fiction forces a trade-off: hand-built branching stories keep quality but do not scale; free-form LLM stories scale but forget characters, break world rules and drift from the genre. Fantasy, with its magic systems and invented geographies, exposes this "authorial paradox" most sharply.</p>
+      <h3>Approach</h3>
+      <p>The project compared GPT-3.5, base Mistral-7B-Instruct-v0.2, a Mistral model fine-tuned on a fantasy corpus, and GenreGPT-2, wrapped in a Flask web prototype with custom characters, three generated choices per turn, <b>dynamic state tracking</b> (character and world cards) and a four-dimension rating system.</p>
+    </div>
+    <div class="panel">
+      <h3>Architecture</h3>
+      <ol class="flow">
+        <li>Browser UI (HTML, JS)</li>
+        <li>Flask server (app.py)</li>
+        <li>Story generator, prompt builder + parser</li>
+        <li>LLM layer (GPT-3.5 API / local Mistral)</li>
+        <li>State manager + CSV rating store</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="charts">
+    <figure class="panel chart"><figcaption>Average participant ratings (n = 23)</figcaption><div id="chartRatings"></div></figure>
+    <figure class="panel chart"><figcaption>Mistral vs GPT-3.5, user scores out of 5</figcaption><div id="chartPref"></div></figure>
+    <figure class="panel chart"><figcaption>Lexical diversity by model</figcaption><div id="chartLex"></div></figure>
+    <figure class="panel chart"><figcaption>Average sentence length (words)</figcaption><div id="chartSent"></div></figure>
+    <figure class="panel chart wide"><figcaption>Seconds to generate one story segment (typical range)</figcaption><div id="chartTime"></div></figure>
+  </div>
+
+  <div class="panel findings">
+    <h3>Key findings</h3>
+    <ul>
+      <li>Mistral outputs were preferred over GPT-3.5 (4.2 vs 3.6 overall; 4.4 vs 3.3 for world-building).</li>
+      <li>Base Mistral had the highest lexical diversity (0.86); fine-tuning raised fantasy vocabulary but slightly narrowed breadth (0.83).</li>
+      <li>World-building was rated highest (3.87/5); character believability lowest (3.39/5), as consistency decays in long stories.</li>
+      <li>Local Mistral needed 1 to 2 minutes per segment, while the fine-tuned model took 10 to 15 s on a GPU but could not be deployed.</li>
+    </ul>
+    <p class="note">Figures are reproduced from the dissertation. Interpretation of the p-value and user scores is the author's.</p>
+  </div>
+</section>
+
+<section id="completed" class="wrap">
+  <h2>Completing the Dissertation</h2>
+  <p class="sub">The report named limitations and future work it could not finish. This site delivers most of them as working software.</p>
+  <div class="timeline" id="timeline"></div>
+</section>
+
+<section id="about" class="wrap">
+  <h2>About</h2>
+  <div class="split">
+    <div class="panel">
+      <p><b>Tales Unwritten</b> is the interactive companion to the dissertation <i>Interactive Storytelling using Large Language Models</i> by Kirtan Ajitbhai Chanllawala (student 3067560), University of Stirling, supervised by Burcu Can Buglalilar.</p>
+      <p>It is a static site: plain HTML, CSS and JavaScript. There is no server, no build step and no dependency to install.</p>
+    </div>
+    <div class="panel">
+      <h3>Privacy and services</h3>
+      <ul>
+        <li>Story text goes to api.mistral.ai only when you supply a key.</li>
+        <li>Scene art is generated in your browser; nothing is sent anywhere for it.</li>
+        <li>Ratings and saved tales stay in your browser's local storage.</li>
+        <li>Fonts load from Google Fonts.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <p>Tales Unwritten &middot; University of Stirling dissertation companion &middot; MIT licensed code</p>
+</footer>
+
+<dialog id="lightbox">
+  <form method="dialog"><button class="close" aria-label="Close">&times;</button></form>
+  <div id="lbArt"></div>
+  <div class="lb-meta"><h3 id="lbTitle"></h3><p id="lbText"></p><div class="row"><button class="btn primary" id="lbBegin" type="button">Begin a tale here</button><button class="btn" id="lbReroll" type="button">New variation</button><button class="btn" id="lbSave" type="button">Download SVG</button></div></div>
+</dialog>
+
+<script src="assets/js/scenes.js"></script>
+<script src="assets/js/tales.js"></script>
+<script src="assets/js/engine.js"></script>
+<script src="assets/js/charts.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>
